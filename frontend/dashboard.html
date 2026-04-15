@@ -329,6 +329,79 @@
     </div>
   </div>
 
+  <!-- ══ LIVE PREDICTION (BACKEND) ══ -->
+  <div class="section reveal">
+    <div class="section-title">Live Prediction</div>
+    <div class="chart-card">
+      <div class="chart-card-title"><span style="background:var(--accent4)"></span> Real-time ML + Scheduler APIs</div>
+
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:1rem;">
+        <div>
+          <div class="kpi-label" style="margin-bottom:.35rem;">task_size</div>
+          <input id="in-task-size" class="input" type="number" step="any" placeholder="e.g. 1200" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.65rem .7rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;outline:none;">
+        </div>
+        <div>
+          <div class="kpi-label" style="margin-bottom:.35rem;">memory</div>
+          <input id="in-memory" class="input" type="number" step="any" placeholder="e.g. 512" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.65rem .7rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;outline:none;">
+        </div>
+        <div>
+          <div class="kpi-label" style="margin-bottom:.35rem;">cpu</div>
+          <input id="in-cpu" class="input" type="number" step="any" placeholder="e.g. 2" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.65rem .7rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;outline:none;">
+        </div>
+        <div>
+          <div class="kpi-label" style="margin-bottom:.35rem;">bandwidth</div>
+          <input id="in-bandwidth" class="input" type="number" step="any" placeholder="e.g. 10" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.65rem .7rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;outline:none;">
+        </div>
+        <div>
+          <div class="kpi-label" style="margin-bottom:.35rem;">current_load</div>
+          <input id="in-current-load" class="input" type="number" step="any" placeholder="e.g. 0.35" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.65rem .7rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;outline:none;">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:1.25rem;">
+        <button id="btn-run" style="background:linear-gradient(135deg,var(--accent1),var(--accent3));border:none;color:#06101a;padding:.75rem 1rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:.72rem;cursor:pointer;">
+          Run Prediction
+        </button>
+        <label style="display:flex;align-items:center;gap:.5rem;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--muted);">
+          <input id="toggle-auto" type="checkbox">
+          Auto-refresh
+        </label>
+        <label style="display:flex;align-items:center;gap:.5rem;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--muted);">
+          Interval (ms)
+          <input id="in-interval" type="number" min="500" step="100" value="2000" style="width:120px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.45rem .5rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;outline:none;">
+        </label>
+        <div id="live-status" style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--muted);"></div>
+      </div>
+
+      <div class="scheduler-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="policy-card">
+          <div class="policy-name">Predicted Time</div>
+          <div class="policy-value" id="out-predicted-time">—</div>
+          <div class="policy-unit">seconds</div>
+          <div class="policy-bar"><div class="policy-bar-fill" style="width:100%;background:rgba(0,212,255,.25)"></div></div>
+        </div>
+        <div class="policy-card">
+          <div class="policy-name">Uncertainty</div>
+          <div class="policy-value" id="out-uncertainty">—</div>
+          <div class="policy-unit">σ (std dev)</div>
+          <div class="policy-bar"><div class="policy-bar-fill" style="width:100%;background:rgba(167,139,250,.25)"></div></div>
+        </div>
+        <div class="policy-card winner">
+          <div class="policy-name">Best Node</div>
+          <div class="policy-value" id="out-best-node">—</div>
+          <div class="policy-unit">scheduler decision</div>
+          <div class="policy-bar"><div class="policy-bar-fill" style="width:100%;background:rgba(52,211,153,.25)"></div></div>
+        </div>
+        <div class="policy-card">
+          <div class="policy-name">Risk</div>
+          <div class="policy-value" id="out-risk">—</div>
+          <div class="policy-unit">0–1</div>
+          <div class="policy-bar"><div class="policy-bar-fill" style="width:100%;background:rgba(255,78,106,.25)"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ ARCHITECTURE ══ -->
   <div class="section reveal">
     <div class="section-title">System Architecture</div>
@@ -481,11 +554,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 // ─────────────────────────────────────────────
-//  DATA  (mirrors outputs/summary.json)
-//  If you run main.py, replace this with:
-//    fetch('../outputs/summary.json').then(r=>r.json()).then(init)
+//  STATIC DATA (for charts/table visuals only)
 // ─────────────────────────────────────────────
-const DATA = {
+const STATIC_DATA = {
   models: [
     { name:"Linear Regression", mae:14.2831, rmse:28.4912, r2:0.7214, mape:22.41, cv_r2_mean:0.7198, cv_r2_std:0.0112 },
     { name:"Ridge Regression",  mae:14.2619, rmse:28.4701, r2:0.7216, mape:22.38, cv_r2_mean:0.7201, cv_r2_std:0.0109 },
@@ -800,6 +871,110 @@ function init(data) {
 }
 
 // ─────────────────────────────────────────────
+//  LIVE BACKEND DATA (prediction + scheduling)
+// ─────────────────────────────────────────────
+async function fetchLiveData(inputData, { signal } = {}) {
+  const [predictRes, scheduleRes] = await Promise.all([
+    fetch('/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(inputData),
+      signal,
+    }),
+    fetch('/schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(inputData),
+      signal,
+    }),
+  ]);
+
+  if (!predictRes.ok) throw new Error(`Predict failed (${predictRes.status})`);
+  if (!scheduleRes.ok) throw new Error(`Schedule failed (${scheduleRes.status})`);
+
+  const predictJson = await predictRes.json();
+  const scheduleJson = await scheduleRes.json();
+
+  const predicted_time = Number(predictJson?.predicted_time);
+  const uncertainty = Number(predictJson?.uncertainty);
+  const best_node = String(scheduleJson?.best_node ?? '');
+  const risk = Number(scheduleJson?.risk);
+
+  if (!Number.isFinite(predicted_time) || !Number.isFinite(uncertainty)) {
+    throw new Error('Invalid /predict response');
+  }
+  if (!best_node || !Number.isFinite(risk)) {
+    throw new Error('Invalid /schedule response');
+  }
+
+  return { predicted_time, uncertainty, best_node, risk };
+}
+
+function readInputData() {
+  const task_size = Number(document.getElementById('in-task-size').value);
+  const memory = Number(document.getElementById('in-memory').value);
+  const cpu = Number(document.getElementById('in-cpu').value);
+  const bandwidth = Number(document.getElementById('in-bandwidth').value);
+  const current_load = Number(document.getElementById('in-current-load').value);
+
+  const fields = { task_size, memory, cpu, bandwidth, current_load };
+  const invalid = Object.entries(fields).filter(([, v]) => !Number.isFinite(v));
+  if (invalid.length) {
+    throw new Error(`Missing/invalid inputs: ${invalid.map(([k]) => k).join(', ')}`);
+  }
+
+  return fields;
+}
+
+function setLiveStatus(msg, kind = 'info') {
+  const el = document.getElementById('live-status');
+  el.textContent = msg || '';
+  el.style.color =
+    kind === 'error' ? 'var(--accent2)' :
+    kind === 'ok' ? 'var(--accent4)' :
+    'var(--muted)';
+}
+
+let liveAbort = null;
+let liveTimer = null;
+async function runLivePrediction() {
+  if (liveAbort) liveAbort.abort();
+  liveAbort = new AbortController();
+
+  let inputData;
+  try {
+    inputData = readInputData();
+  } catch (e) {
+    setLiveStatus(e?.message || 'Invalid inputs', 'error');
+    return;
+  }
+
+  setLiveStatus('Fetching live prediction…', 'info');
+  try {
+    const liveData = await fetchLiveData(inputData, { signal: liveAbort.signal });
+    document.getElementById('out-predicted-time').innerText = liveData.predicted_time.toFixed(3);
+    document.getElementById('out-uncertainty').innerText = liveData.uncertainty.toFixed(3);
+    document.getElementById('out-best-node').innerText = liveData.best_node;
+    document.getElementById('out-risk').innerText = liveData.risk.toFixed(3);
+    setLiveStatus('Updated from backend.', 'ok');
+  } catch (e) {
+    if (e?.name === 'AbortError') return;
+    setLiveStatus(e?.message || 'Backend request failed', 'error');
+  }
+}
+
+function syncAutoRefresh() {
+  const enabled = document.getElementById('toggle-auto').checked;
+  const intervalMs = Math.max(500, Number(document.getElementById('in-interval').value) || 2000);
+  if (liveTimer) {
+    clearInterval(liveTimer);
+    liveTimer = null;
+  }
+  if (!enabled) return;
+  liveTimer = setInterval(() => { runLivePrediction(); }, intervalMs);
+}
+
+// ─────────────────────────────────────────────
 //  SCROLL REVEAL
 // ─────────────────────────────────────────────
 const observer = new IntersectionObserver(entries => {
@@ -808,15 +983,13 @@ const observer = new IntersectionObserver(entries => {
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
 // ─────────────────────────────────────────────
-//  BOOT — try loading real summary.json first
+//  BOOT
 // ─────────────────────────────────────────────
-fetch('../outputs/summary.json')
-  .then(r => { if(!r.ok) throw new Error(); return r.json(); })
-  .then(json => {
-    // Merge with static feature/drift data (not in summary.json)
-    init(Object.assign({}, DATA, json));
-  })
-  .catch(() => init(DATA));
+init(STATIC_DATA);
+
+document.getElementById('btn-run').addEventListener('click', () => runLivePrediction());
+document.getElementById('toggle-auto').addEventListener('change', () => syncAutoRefresh());
+document.getElementById('in-interval').addEventListener('change', () => syncAutoRefresh());
 </script>
 </body>
 </html>
